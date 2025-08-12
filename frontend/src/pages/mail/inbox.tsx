@@ -17,7 +17,7 @@ import {
 import { toast } from "sonner";
 import { Star, Send, Trash2, Pencil, Filter, Calendar, X, ChevronLeft, ChevronRight, Folder } from "lucide-react";
 
-type Category = "重要" | "广告" | "推广";
+type Category = "重要" | "广告" | "推广" | "垃圾";
 
 type MockMail = {
   id: string;
@@ -60,7 +60,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
 }
 
 export default function Inbox() {
-  const VIEWS = ["全部", "重要", "广告", "推广", "星标"] as const;
+  const VIEWS = ["全部", "重要", "广告", "推广", "星标", "垃圾"] as const;
   type View = typeof VIEWS[number];
 
   // 数据源（可变更）
@@ -176,6 +176,20 @@ export default function Inbox() {
     if (selectedCount === 0) return;
     setMails((prev) => prev.filter((m) => !selected.has(m.id)));
     toast.success(`已删除 ${selectedCount} 封邮件`);
+    setSelected(new Set());
+  };
+
+  const markSpam = () => {
+    if (selectedCount === 0) return;
+    setMails((prev) => prev.map((m) => (selected.has(m.id) ? { ...m, category: "垃圾" as Category } : m)));
+    toast.success("已标记为垃圾");
+    setSelected(new Set());
+  };
+
+  const restoreFromSpam = () => {
+    if (selectedCount === 0) return;
+    setMails((prev) => prev.map((m) => (selected.has(m.id) ? { ...m, category: undefined } : m)));
+    toast.success("已还原邮件");
     setSelected(new Set());
   };
 
@@ -319,6 +333,15 @@ export default function Inbox() {
                   <DropdownMenuItem onClick={() => moveTo("推广")}>推广</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <Button size="sm" variant="outline" onClick={markSpam} disabled={selectedCount === 0}>
+                标记为垃圾
+              </Button>
+              {view === "垃圾" ? (
+                <Button size="sm" variant="secondary" onClick={restoreFromSpam} disabled={selectedCount === 0}>
+                  还原
+                </Button>
+              ) : null}
 
               <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={bulkDelete} disabled={selectedCount === 0}>
                 <Trash2 className="h-4 w-4" />
