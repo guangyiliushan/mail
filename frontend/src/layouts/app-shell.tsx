@@ -88,9 +88,22 @@ export default function AppShell() {
             <DropdownMenuContent align="end" className="min-w-48">
               <DropdownMenuLabel>账号</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>个人设置</DropdownMenuItem>
-              <DropdownMenuItem>外观与主题</DropdownMenuItem>
-              <DropdownMenuItem>退出登录</DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/settings/profile">个人资料</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/settings/security">安全设置</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/settings/oauth">第三方账号</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => {
+                localStorage.removeItem("token");
+                window.location.href = "/auth/login";
+              }}>
+                退出登录
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -116,7 +129,9 @@ export default function AppShell() {
             <SidebarItem icon={Folder} label="草稿箱" />
             <SidebarItem icon={Trash2} label="垃圾箱" />
             <Separator className="my-3" />
+          <Link to="/settings/profile" className="block">
             <SidebarItem icon={Settings} label="设置" />
+          </Link>
           </nav>
         </motion.aside>
 
