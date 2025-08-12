@@ -7,6 +7,7 @@ import { Card } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
 import { Badge } from "../components/ui/badge";
 import { Mail, Star, Send, Trash2, Pencil, Loader2, Shield, EyeOff, Eye } from "lucide-react";
+import RichTextEditor from "../components/rich-text-editor";
 
 /**
  * 通用小组件
@@ -322,6 +323,8 @@ export function InboxPage() {
  */
 export function ComposePage() {
   const [showPwd, setShowPwd] = useState(false); // 仅示例交互
+  const [html, setHtml] = useState<string>("");
+
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
       <SectionTitle title="撰写邮件" desc="支持草稿自动保存与富文本编辑（占位）。" />
@@ -341,19 +344,13 @@ export function ComposePage() {
           <Input id="subject" placeholder="请输入主题" />
         </div>
 
-        {/* 工具栏占位 */}
-        <div className="flex flex-wrap items-center gap-2 py-1">
-          <Button variant="secondary" size="sm">B</Button>
-          <Button variant="secondary" size="sm"><i>I</i></Button>
-          <Button variant="secondary" size="sm">H1</Button>
-          <Button variant="secondary" size="sm">链接</Button>
-          <Button variant="secondary" size="sm">列表</Button>
-        </div>
-
-        {/* 富文本编辑器占位（Tiptap 接入位） */}
-        <div className="min-h-[220px] border rounded-md p-3 text-sm text-muted-foreground">
-          富文本编辑器占位：后续集成 Tiptap 2
-        </div>
+        {/* 富文本编辑器 */}
+        <RichTextEditor
+          value={html}
+          onChange={setHtml}
+          placeholder="撰写邮件内容…"
+          minHeight={280}
+        />
 
         <div className="flex items-center gap-2">
           <Button className="gap-2"><Send className="h-4 w-4" /> 发送</Button>

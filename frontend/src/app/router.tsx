@@ -1,14 +1,16 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import AppShell from "../layouts/app-shell";
-import {
-  LoginPage,
-  RegisterPage,
-  VerifyPage,
-  InboxPage,
-  ComposePage,
-  SettingsSecurityPage,
-} from "../pages/core-pages";
+
+// Auth pages (modularized)
+import Login from "../pages/auth/login";
+import Register from "../pages/auth/register";
+import Verify from "../pages/auth/verify";
+
+import Inbox from "../pages/mail/inbox";
+import Compose from "../pages/mail/compose";
+import SettingsSecurity from "../pages/settings/security";
+
 import { isAuthenticated } from "../stores/auth-store";
 
 /**
@@ -47,9 +49,9 @@ const router = createBrowserRouter([
     element: <AuthLayout />,
     children: [
       { index: true, element: <Navigate to="login" replace /> },
-      { path: "login", element: <LoginPage /> },
-      { path: "register", element: <RegisterPage /> },
-      { path: "verify", element: <VerifyPage /> },
+      { path: "login", element: <Login /> },
+      { path: "register", element: <Register /> },
+      { path: "verify", element: <Verify /> },
       // 可在后续追加 forgot/reset
     ],
   },
@@ -63,9 +65,9 @@ const router = createBrowserRouter([
       {
         element: <ProtectedLayout />,
         children: [
-          { path: "mail/inbox", element: <InboxPage /> },
-          { path: "mail/compose", element: <ComposePage /> },
-          { path: "settings/security", element: <SettingsSecurityPage /> },
+          { path: "mail/inbox", element: <Inbox /> },
+          { path: "mail/compose", element: <Compose /> },
+          { path: "settings/security", element: <SettingsSecurity /> },
         ],
       },
     ],
