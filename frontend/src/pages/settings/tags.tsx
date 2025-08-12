@@ -32,7 +32,8 @@ import {
 } from "../../components/ui/popover";
 import { toast } from "sonner";
 import { Tag as TagIcon, Plus, Pencil, Trash2, Palette, Save, X, GripVertical } from "lucide-react";
-import { createTag, deleteTag, listTags, Tag, updateTag, reorderTags } from "../../stores/tag-store";
+import type { Tag } from "../../stores/tag-store";
+import { createTag, deleteTag, listTags, updateTag, reorderTags } from "../../stores/tag-store";
 
 const PALETTE = [
   "#ef4444", "#f97316", "#f59e0b", "#84cc16",
@@ -120,7 +121,7 @@ export default function SettingsTags() {
     e.dataTransfer.effectAllowed = "move";
     try {
       e.dataTransfer.setData("text/plain", id);
-    } catch {}
+    } catch { /* noop: setData may fail on some browsers */ }
   }
 
   function onDragOver(e: React.DragEvent<HTMLLIElement>, overId: string) {

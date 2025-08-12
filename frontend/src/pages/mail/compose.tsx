@@ -7,10 +7,11 @@ import { Card } from "../../components/ui/card";
 import { Separator } from "../../components/ui/separator";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Progress } from "../../components/ui/progress";
-import { Send, EyeOff, Eye, Loader2, CheckCircle2, Undo2 } from "lucide-react";
+import { Send, Eye, Loader2, CheckCircle2, Undo2 } from "lucide-react";
 import RichTextEditor from "../../components/rich-text-editor";
 import { useDebouncedCallback } from "../../hooks/use-debounce";
 import { loadDraft, saveDraft, clearDraft } from "../../lib/draft";
+import AttachmentZone, { type Attachment } from "../../components/attachment-zone";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 type SendState = "idle" | "sending" | "sent";
@@ -28,6 +29,9 @@ export default function Compose() {
   const [cc, setCc] = useState("");
   const [subject, setSubject] = useState("");
   const [html, setHtml] = useState<string>("");
+
+  // 附件
+  const [files, setFiles] = useState<Attachment[]>([]);
 
   // 自动保存状态
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -65,7 +69,6 @@ export default function Compose() {
 
   // 任何字段变化都触发自动保存（防抖）
   useEffect(() => {
-    // 仅在可编辑时保存，发送中不触发
     if (canEdit) {
       doAutoSave();
     }
@@ -75,7 +78,7 @@ export default function Compose() {
   async function handleSend() {
     if (sendState === "sending") return;
     setSendState("sending");
-    // 模拟发送
+    // 模拟发送（可替换为调用后端 API）
     await new Promise((r) => setTimeout(r, 900));
     setSendState("sent");
     clearDraft();
@@ -92,7 +95,7 @@ export default function Compose() {
   function handleUndo() {
     // 撤销发送：仅 UI 恢复为可继续编辑状态
     setSendState("idle");
-    // 撤销后立刻保存一次，以保证恢复草稿（这里直接触发保存）
+    // 撤销后立刻保存一次，以保证恢复草稿
     setSaveStatus("saving");
     saveDraft({ to, cc, subject, html })
       .then((saved) => {
@@ -137,7 +140,7 @@ export default function Compose() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">撰写邮件</h2>
-          <p className="text-sm text-muted-foreground">支持草稿自动保存与富文本编辑。</p>
+          <p className="text-sm text-muted-foreground">支持草稿自动保存、富文本编辑与附件。</p>
         </div>
         {saveBar}
       </div>
@@ -203,6 +206,11 @@ export default function Compose() {
           className={canEdit ? "" : "opacity-60 pointer-events-none"}
         />
 
+        <div className="space-y-2">
+          <Label>附件</Label>
+          <AttachmentZone files={files} onChange={setFiles} disabled={!canEdit} />
+        </div>
+
         <Separator />
 
         <div className="flex items-center gap-2">
@@ -220,7 +228,6 @@ export default function Compose() {
             disabled={!canEdit}
             title="示例开关（保留交互动效）"
           >
-            {/* 保留示例开关的按钮占位（避免 UI 跳动） */}
             <Eye className="h-4 w-4" />
             示例
           </Button>
