@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "../components/ui/dropdown-menu";
+import { Toaster } from "sonner";
 
 function useTheme() {
   const [isDark, setIsDark] = useState(false);
@@ -41,6 +42,7 @@ export default function AppShell() {
 
   return (
     <div className="min-h-dvh w-full bg-background text-foreground">
+      <Toaster richColors position="top-center" closeButton />
       {/* Topbar */}
       <motion.header
         initial={{ y: -12, opacity: 0 }}

@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import AppShell from "../layouts/app-shell";
+import { Toaster } from "sonner";
 
 // Auth pages (modularized)
 import Login from "../pages/auth/login";
@@ -12,6 +13,7 @@ import Compose from "../pages/mail/compose";
 import SettingsSecurity from "../pages/settings/security";
 import SettingsProfile from "../pages/settings/profile";
 import SettingsOAuth from "../pages/settings/oauth";
+import SettingsTags from "../pages/settings/tags";
 
 import { isAuthenticated } from "../stores/auth-store";
 
@@ -32,6 +34,7 @@ function ProtectedLayout() {
 function AuthLayout() {
   return (
     <div className="min-h-dvh bg-background text-foreground">
+      <Toaster richColors position="top-center" closeButton />
       <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="mx-auto max-w-[980px] px-4 py-2 text-sm font-medium">
           账号与安全
@@ -72,6 +75,7 @@ const router = createBrowserRouter([
           { path: "settings/security", element: <SettingsSecurity /> },
           { path: "settings/profile", element: <SettingsProfile /> },
           { path: "settings/oauth", element: <SettingsOAuth /> },
+          { path: "settings/tags", element: <SettingsTags /> },
         ],
       },
     ],
