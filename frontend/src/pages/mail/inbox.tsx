@@ -1,27 +1,30 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Card } from "../../components/ui/card";
 import { Separator } from "../../components/ui/separator";
 import { Badge } from "../../components/ui/badge";
-import { Star, Send, Trash2, Pencil } from "lucide-react";
+import { Star, Send, Trash2, Pencil, Filter, Calendar, X } from "lucide-react";
+
+type Category = "重要" | "广告" | "推广";
 
 type MockMail = {
   id: string;
   subject: string;
   from: string;
   snippet: string;
-  date: string;
+  date: string; // 展示
+  ts: number; // 真实时间戳，用于筛选
   starred?: boolean;
-  category?: "重要" | "广告" | "推广";
+  category?: Category;
 };
 
 const MOCK_MAILS: MockMail[] = [
-  { id: "1", subject: "项目进度同步与下周计划", from: "Alice", snippet: "这周我们完成了 A/B 两项里程碑，详细见文档...", date: "10:24", starred: true, category: "重要" },
-  { id: "2", subject: "八月促销专享优惠", from: "ShopPlus", snippet: "限时 72 小时满减，会员再享 9 折...", date: "昨天", category: "推广" },
-  { id: "3", subject: "发票开具提醒", from: "Finance Bot", snippet: "您七月账期的增值税专用发票已开具...", date: "周一", category: "重要" },
-  { id: "4", subject: "新品上架通知", from: "AdCorp", snippet: "全新系列上新，点击查看详情...", date: "周一", category: "广告" },
+  { id: "1", subject: "项目进度同步与下周计划", from: "Alice", snippet: "这周我们完成了 A/B 两项里程碑，详细见文档...", date: "10:24", ts: new Date("2025-08-12T10:24:00").getTime(), starred: true, category: "重要" },
+  { id: "2", subject: "八月促销专享优惠", from: "ShopPlus", snippet: "限时 72 小时满减，会员再享 9 折...", date: "昨天", ts: new Date("2025-08-11T13:10:00").getTime(), category: "推广" },
+  { id: "3", subject: "发票开具提醒", from: "Finance Bot", snippet: "您七月账期的增值税专用发票已开具...", date: "周一", ts: new Date("2025-08-11T09:00:00").getTime(), category: "重要" },
+  { id: "4", subject: "新品上架通知", from: "AdCorp", snippet: "全新系列上新，点击查看详情...", date: "周一", ts: new Date("2025-08-11T08:00:00").getTime(), category: "广告" },
 ];
 
 function escapeRegExp(s: string) {
@@ -53,15 +56,57 @@ export default function Inbox() {
   const [keyword, setKeyword] = useState("");
   const [activeId, setActiveId] = useState("1");
 
+  // 高级筛选
+  const [showAdv, setShowAdv] = useState(false);
+  const [fromFilter, setFromFilter] = useState("");
+  const [start, setStart] = useState(""); // yyyy-mm-dd
+  const [end, setEnd] = useState(""); // yyyy-mm-dd
+  const [tagSet, setTagSet] = useState<Set<Category>>(new Set());
+
+  const hasAdv = !!fromFilter || !!start || !!end || tagSet.size > 0;
+
+  const toggleTag = (t: Category) => {
+    setTagSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t);
+      else next.add(t);
+      return next;
+    });
+  };
+
   const q = keyword.trim().toLowerCase();
-  const filtered = MOCK_MAILS.filter((m) => {
-    const viewOk = view === "全部" ? true : view === "星标" ? !!m.starred : m.category === view;
-    const text = `${m.subject} ${m.from} ${m.snippet}`.toLowerCase();
-    const kwOk = q ? text.includes(q) : true;
-    return viewOk && kwOk;
-  });
+
+  const filtered = useMemo(() => {
+    const sMs = start ? new Date(`${start}T00:00:00`).getTime() : undefined;
+    const eMs = end ? new Date(`${end}T23:59:59`).getTime() : undefined;
+    return MOCK_MAILS.filter((m) => {
+      // 视图
+      const viewOk = view === "全部" ? true : view === "星标" ? !!m.starred : m.category === view;
+      if (!viewOk) return false;
+      // 关键字
+      const text = `${m.subject} ${m.from} ${m.snippet}`.toLowerCase();
+      if (q && !text.includes(q)) return false;
+      // 发件人
+      if (fromFilter && !m.from.toLowerCase().includes(fromFilter.toLowerCase())) return false;
+      // 标签
+      if (tagSet.size > 0) {
+        if (!m.category || !tagSet.has(m.category)) return false;
+      }
+      // 日期
+      if (sMs && m.ts < sMs) return false;
+      if (eMs && m.ts > eMs) return false;
+      return true;
+    });
+  }, [view, q, fromFilter, start, end, tagSet]);
 
   const active = filtered.find((m) => m.id === activeId) ?? filtered[0] ?? null;
+
+  const clearAllAdv = () => {
+    setFromFilter("");
+    setStart("");
+    setEnd("");
+    setTagSet(new Set());
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
@@ -73,7 +118,7 @@ export default function Inbox() {
       </div>
 
       {/* 筛选 + 搜索 */}
-      <Card className="p-2 md:p-3">
+      <Card className="p-2 md:p-3 space-y-2">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             {VIEWS.map((v) => (
@@ -81,18 +126,83 @@ export default function Inbox() {
                 {v}
               </Button>
             ))}
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={() => setShowAdv((s) => !s)}
+              aria-expanded={showAdv}
+            >
+              <Filter className="h-4 w-4" />
+              高级筛选
+            </Button>
           </div>
           <div className="w-full md:w-[320px]">
             <Input placeholder="搜索主题、发件人、摘要…" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
           </div>
         </div>
+
+        {showAdv && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} className="overflow-hidden">
+            <div className="pt-2 grid grid-cols-1 gap-2 md:grid-cols-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} aria-label="开始日期" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} aria-label="结束日期" />
+              </div>
+              <div className="md:col-span-1">
+                <Input placeholder="发件人（模糊匹配）" value={fromFilter} onChange={(e) => setFromFilter(e.target.value)} />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {(["重要", "广告", "推广"] as Category[]).map((t) => (
+                  <Button
+                    key={t}
+                    size="sm"
+                    variant={tagSet.has(t) ? "default" : "secondary"}
+                    onClick={() => toggleTag(t)}
+                  >
+                    {t}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="pt-2 flex items-center gap-2">
+              <Button size="sm" onClick={() => setShowAdv(false)}>应用</Button>
+              <Button size="sm" variant="ghost" onClick={clearAllAdv}>重置</Button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* 条件 Chips */}
+        {hasAdv && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {start && (
+              <Chip onClear={() => setStart("")} label={`开始: ${start}`} />
+            )}
+            {end && (
+              <Chip onClear={() => setEnd("")} label={`结束: ${end}`} />
+            )}
+            {fromFilter && (
+              <Chip onClear={() => setFromFilter("")} label={`发件人: ${fromFilter}`} />
+            )}
+            {[...tagSet].map((t) => (
+              <Chip key={t} onClear={() => toggleTag(t)} label={`标签: ${t}`} />
+            ))}
+            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={clearAllAdv}>
+              清除全部
+            </Button>
+          </div>
+        )}
       </Card>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[380px_1fr]">
         {/* 列表 */}
         <Card className="p-2">
           <div className="px-2 py-1 text-xs text-muted-foreground">
-            共 {filtered.length} 封 {view !== "全部" ? `· ${view}` : ""}
+            共 {filtered.length} 封 {view !== "全部" ? `· ${view}` : ""}{hasAdv ? " · 已应用高级筛选" : ""}
           </div>
           <Separator className="my-1" />
 
@@ -147,5 +257,20 @@ export default function Inbox() {
         </Card>
       </div>
     </motion.div>
+  );
+}
+
+function Chip({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md bg-accent px-2 h-7 text-xs">
+      {label}
+      <button
+        className="inline-flex items-center justify-center rounded hover:bg-muted/60 transition w-5 h-5"
+        aria-label="清除筛选"
+        onClick={onClear}
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </span>
   );
 }
