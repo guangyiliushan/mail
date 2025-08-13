@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Outlet, Link } from "react-router-dom";
-import { Mail, Star, Send, Trash2, Settings, Menu, Pencil, Search, Sun, Moon, Folder, Inbox } from "lucide-react";
+import { Mail, Star, Send, Trash2, Settings, Menu, Pencil, Search, Sun, Moon, Folder, Inbox, Wand2, List } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Separator } from "../components/ui/separator";
@@ -100,6 +100,13 @@ export default function AppShell() {
                 <Link to="/settings/oauth">第三方账号</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/mail/rules">规则构建器</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/mail/rules/list">规则列表</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => {
                 localStorage.removeItem("token");
                 window.location.href = "/auth/login";
@@ -131,6 +138,12 @@ export default function AppShell() {
             <SidebarItem icon={Folder} label="草稿箱" />
             <SidebarItem icon={Trash2} label="垃圾箱" />
             <Separator className="my-3" />
+          <Link to="/mail/rules" className="block">
+            <SidebarItem icon={Wand2} label="规则构建器" />
+          </Link>
+          <Link to="/mail/rules/list" className="block">
+            <SidebarItem icon={List} label="规则列表" />
+          </Link>
           <Link to="/settings/profile" className="block">
             <SidebarItem icon={Settings} label="设置" />
           </Link>
