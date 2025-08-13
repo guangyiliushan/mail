@@ -4,11 +4,11 @@ import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Separator } from "../../components/ui/separator";
 import { Skeleton } from "../../components/ui/skeleton";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { BulkToolbar, FilterBar, MailList, ReaderPane, type Category, type MockMail } from "../../components/mail/mail-modules";
 import TopActions from "../../components/mail/top-actions";
+import { ListStats, PaginationControls } from "../../components/common/pagination-and-stats";
 
 const INIT_MAILS: MockMail[] = [
   { id: "1", subject: "项目进度同步与下周计划", from: "Alice", snippet: "这周我们完成了 A/B 两项里程碑，详细见文档...", date: "10:24", ts: new Date("2025-08-12T10:24:00").getTime(), starred: true, category: "重要", read: false },
@@ -245,9 +245,12 @@ export default function Inbox() {
               onDelete={bulkDelete}
             />
 
-            <div className="px-2 py-1 text-xs text-muted-foreground">
-              共 {filtered.length} 封 {view !== "全部" ? `· ${view}` : ""}{hasAdv ? " · 已应用高级筛选" : ""}
-            </div>
+            <ListStats
+              className="px-2 py-1"
+              count={filtered.length}
+              unit="封"
+              segments={[view !== "全部" ? view : "", hasAdv ? "已应用高级筛选" : ""]}
+            />
             <Separator className="my-1" />
 
             {filtered.length === 0 ? (
@@ -264,33 +267,14 @@ export default function Inbox() {
             )}
 
             {/* 分页 */}
-            <div className="flex items-center justify-between px-2 py-2">
-              <div className="text-xs text-muted-foreground">
-                第 {pageClamped} / {totalPages} 页 · 每页 {pageSize} 封
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={pageClamped <= 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  上一页
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={pageClamped >= totalPages}
-                >
-                  下一页
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <PaginationControls
+              className="px-2 py-2"
+              page={pageClamped}
+              totalPages={totalPages}
+              onPrev={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
+              summary={`第 ${pageClamped} / ${totalPages} 页 · 每页 ${pageSize} 封`}
+            />
           </Card>
 
           {/* 阅读窗格 */}
