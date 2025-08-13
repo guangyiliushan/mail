@@ -9,9 +9,11 @@ import { Separator } from "../../components/ui/separator";
 import { Switch } from "../../components/ui/switch";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 import { Alert, AlertDescription } from "../../components/ui/alert";
-import { Loader2, Image as ImageIcon, User } from "lucide-react";
+import { Loader2, Image as ImageIcon, User, Save, RotateCcw } from "lucide-react";
+import SignatureEditor from "../../components/settings/signature-editor";
 
 const KEY = "profile_settings_v1";
+const SIG_KEY = "profile_signature_v1";
 
 type ProfileData = {
   name: string;
@@ -25,10 +27,18 @@ export default function SettingsProfile() {
   const [saving, setSaving] = useState(false);
   const [ok, setOk] = useState<string | null>(null);
 
+  const [signature, setSignature] = useState<string>("");
+  const [sigSaving, setSigSaving] = useState(false);
+  const [sigOk, setSigOk] = useState<string | null>(null);
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) setData(JSON.parse(raw) as ProfileData);
+    } catch {}
+    try {
+      const rawSig = localStorage.getItem(SIG_KEY);
+      if (rawSig) setSignature(String(rawSig));
     } catch {}
   }, []);
 
@@ -40,12 +50,12 @@ export default function SettingsProfile() {
     reader.readAsDataURL(file);
   }
 
-  async function onSave(e: React.FormEvent) {
+  async function onSaveProfile(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setOk(null);
     try {
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 500));
       localStorage.setItem(KEY, JSON.stringify(data));
       setOk("资料已保存");
     } finally {
@@ -53,13 +63,26 @@ export default function SettingsProfile() {
     }
   }
 
+  async function onSaveSignature() {
+    setSigSaving(true);
+    setSigOk(null);
+    try {
+      await new Promise((r) => setTimeout(r, 400));
+      localStorage.setItem(SIG_KEY, signature || "");
+      setSigOk("签名已保存");
+    } finally {
+      setSigSaving(false);
+    }
+  }
+
   return (
-    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-2xl">
-      <div className="mb-3">
-        <h1 className="text-lg font-semibold">个人资料</h1>
-        <p className="text-sm text-muted-foreground">更新头像、昵称与个人简介。</p>
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-2xl space-y-4">
+      <div className="mb-2">
+        <h1 className="text-lg font-semibold">个人资料与签名</h1>
+        <p className="text-sm text-muted-foreground">更新头像、昵称、简介与邮件签名。</p>
       </div>
 
+      {/* 资料 */}
       <Card className="p-4 md:p-6 space-y-4">
         {ok ? (
           <Alert role="status" aria-live="polite">
@@ -67,7 +90,7 @@ export default function SettingsProfile() {
           </Alert>
         ) : null}
 
-        <form className="space-y-4" onSubmit={onSave} noValidate>
+        <form className="space-y-4" onSubmit={onSaveProfile} noValidate>
           {/* 头像 */}
           <div className="flex items-start gap-4">
             <div className="relative">
@@ -143,6 +166,39 @@ export default function SettingsProfile() {
             </Button>
           </div>
         </form>
+      </Card>
+
+      {/* 签名 */}
+      <Card className="p-4 md:p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-medium">邮件签名</h2>
+          <p className="text-xs text-muted-foreground">支持加粗、列表、引用、链接等基础样式。签名将在撰写邮件时自动插入（后续可对接后端偏好接口）。</p>
+        </div>
+
+        {sigOk ? (
+          <Alert role="status" aria-live="polite">
+            <AlertDescription>{sigOk}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <SignatureEditor value={signature} onChange={setSignature} />
+
+        <div className="flex items-center gap-2">
+          <Button type="button" onClick={onSaveSignature} disabled={sigSaving} className="gap-2">
+            {sigSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            保存签名
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setSignature("")}
+            className="gap-2"
+            title="清空编辑器内容"
+          >
+            <RotateCcw className="h-4 w-4" />
+            重置
+          </Button>
+        </div>
       </Card>
     </motion.div>
   );
