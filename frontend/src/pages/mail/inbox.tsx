@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Separator } from "../../components/ui/separator";
 import { Skeleton } from "../../components/ui/skeleton";
+import { Alert, AlertDescription } from "../../components/ui/alert";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { BulkToolbar, FilterBar, MailList, ReaderPane, type Category, type MockMail } from "../../components/mail/mail-modules";
 import TopActions from "../../components/mail/top-actions";
+import { evaluateAndApplyRules } from "../../lib/mail-rules";
 import { ListStats, PaginationControls } from "../../components/common/pagination-and-stats";
 
 const INIT_MAILS: MockMail[] = [
@@ -40,6 +41,14 @@ export default function Inbox() {
 
   // 选择与批量
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // 规则匹配/摘要
+  const [matchedIds, setMatchedIds] = useState<Set<string>>(new Set());
+  const [ruleSummary, setRuleSummary] = useState("");
+  const [bannerOpen, setBannerOpen] = useState(false);
+  useEffect(() => {
+    if (ruleSummary) setBannerOpen(true);
+  }, [ruleSummary]);
 
   // 分页
   const [page, setPage] = useState(1);
@@ -98,11 +107,25 @@ export default function Inbox() {
     setSelected(new Set());
   }, [view, keyword, fromFilter, start, end, tagSet, page]);
 
+  // 应用规则（实时）
+  useEffect(() => {
+    const res = evaluateAndApplyRules(mails as any);
+    setMatchedIds(res.matchedIds);
+    if (!loading && res.changed) {
+      setMails(res.updated as any);
+      if (res.summary) {
+        toast.success(`规则已应用：${res.summary}`);
+        setRuleSummary(res.summary);
+      }
+    }
+  }, [mails, loading]);
+
   const active = filtered.find((m) => m.id === activeId) ?? filtered[0] ?? null;
 
   const isAllSelected = paged.length > 0 && paged.every((m) => selected.has(m.id));
   const isSomeSelected = !isAllSelected && paged.some((m) => selected.has(m.id));
   const selectedCount = selected.size;
+  const matchedCount = useMemo(() => filtered.filter((m) => matchedIds.has(m.id)).length, [filtered, matchedIds]);
 
   const handleToggleRow = (id: string, checked: boolean) => {
     setSelected((prev) => {
@@ -170,6 +193,21 @@ export default function Inbox() {
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
       {/* 顶部动作 */}
       <TopActions onCompose={() => navigate("/mail/compose")} />
+      {bannerOpen && ruleSummary ? (
+        <Alert className="relative pr-10">
+          <AlertDescription className="text-sm">
+            规则已应用：{ruleSummary}
+          </AlertDescription>
+          <button
+            type="button"
+            aria-label="关闭提示"
+            className="absolute top-2 right-2 rounded p-1 hover:bg-accent"
+            onClick={() => setBannerOpen(false)}
+          >
+            ×
+          </button>
+        </Alert>
+      ) : null}
 
       {/* 筛选条（含高级筛选与条件 Chips） */}
       <FilterBar
@@ -249,7 +287,7 @@ export default function Inbox() {
               className="px-2 py-1"
               count={filtered.length}
               unit="封"
-              segments={[view !== "全部" ? view : "", hasAdv ? "已应用高级筛选" : ""]}
+              segments={[view !== "全部" ? view : "", hasAdv ? "已应用高级筛选" : "", matchedCount > 0 ? `规则命中 ${matchedCount}` : ""]}
             />
             <Separator className="my-1" />
 
@@ -263,6 +301,7 @@ export default function Inbox() {
                 onToggleRow={handleToggleRow}
                 onItemClick={(id) => setActiveId(id)}
                 activeId={activeId}
+                matchedIds={matchedIds}
               />
             )}
 

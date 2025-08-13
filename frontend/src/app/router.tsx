@@ -10,6 +10,8 @@ import Verify from "../pages/auth/verify";
 
 import Inbox from "../pages/mail/inbox";
 import Compose from "../pages/mail/compose";
+import Rules from "../pages/mail/rules";
+import RulesList from "../pages/mail/rules-list";
 import SettingsSecurity from "../pages/settings/security";
 import SettingsProfile from "../pages/settings/profile";
 import SettingsOAuth from "../pages/settings/oauth";
@@ -72,6 +74,8 @@ const router = createBrowserRouter([
         children: [
           { path: "mail/inbox", element: <Inbox /> },
           { path: "mail/compose", element: <Compose /> },
+          { path: "mail/rules", element: <Rules /> },
+          { path: "mail/rules/list", element: <RulesList /> },
           { path: "settings/security", element: <SettingsSecurity /> },
           { path: "settings/profile", element: <SettingsProfile /> },
           { path: "settings/oauth", element: <SettingsOAuth /> },

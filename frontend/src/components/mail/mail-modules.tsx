@@ -14,7 +14,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "../ui/dropdown-menu";
-import { Filter, Calendar, X, Folder, Star } from "lucide-react";
+import { Filter, Calendar, X, Folder, Star, Wand2 } from "lucide-react";
 
 export type Category = "重要" | "广告" | "推广" | "垃圾";
 
@@ -253,8 +253,10 @@ export function MailList(props: {
   activeId: string;
   onToggleRow: (id: string, checked: boolean) => void;
   onItemClick: (id: string) => void;
+  matchedIds?: Set<string>;
 }) {
-  const { mails, q, selected, onToggleRow, onItemClick, activeId } = props;
+  const { mails, q, selected, onToggleRow, onItemClick, activeId, matchedIds } = props;
+  const matched = matchedIds ?? new Set<string>();
   return (
     <ul className="divide-y">
       {mails.map((m) => {
@@ -283,6 +285,9 @@ export function MailList(props: {
                     <Highlight text={m.subject} query={q} />
                   </div>
                   <div className="flex items-center gap-2">
+                    {matched.has(m.id) ? (
+                      <Wand2 className="h-3.5 w-3.5 text-violet-500" aria-label="命中规则" />
+                    ) : null}
                     {m.category ? <Badge variant="secondary">{m.category}</Badge> : null}
                     <span className="text-xs text-muted-foreground">{m.date}</span>
                   </div>
