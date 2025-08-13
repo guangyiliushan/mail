@@ -365,8 +365,8 @@ export default function RulesListPage() {
                     size="sm"
                     variant="outline"
                     className="gap-1"
-                    onClick={() => navigate("/mail/rules")}
-                    title="编辑（打开构建器，当前示例未绑定具体规则ID）"
+                    onClick={() => navigate(`/mail/rules?id=${r.id}`)}
+                    title="编辑此规则"
                   >
                     <Pencil className="h-4 w-4" /> 编辑
                   </Button>

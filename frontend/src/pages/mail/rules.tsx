@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { Plus, Minus, Filter, Wand2, Play } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useSearchParams } from "react-router-dom";
 
 type Field = "subject" | "from" | "to" | "body" | "hasAttachment" | "category" | "starred";
 type TextOp = "contains" | "not_contains" | "equals" | "starts_with" | "ends_with" | "regex";
@@ -40,6 +41,17 @@ type Action = {
 
 const CATEGORIES = ["重要", "广告", "推广", "垃圾"];
 
+const LS_KEY = "mail_rules_all";
+
+type Rule = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  conditions: Condition[];
+  actions: Action[];
+  updatedAt: number;
+};
+
 function uid() {
   return Math.random().toString(36).slice(2, 9);
 }
@@ -55,6 +67,50 @@ export default function RulesBuilder() {
   ]);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [params] = useSearchParams();
+  const [currentId, setCurrentId] = useState<string | null>(null);
+
+  // 根据 URL 参数回填编辑
+  useEffect(() => {
+    const id = params.get("id");
+    if (!id) return;
+
+    let list: Rule[] = [];
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) list = arr as Rule[];
+      }
+    } catch {}
+
+    let found = list.find((r) => r.id === id);
+    if (!found) {
+      try {
+        const rawOne = localStorage.getItem("mail_rule_last");
+        if (rawOne) {
+          const one = JSON.parse(rawOne) as Rule;
+          if (one && one.id === id) found = one;
+        }
+      } catch {}
+    }
+
+    if (found) {
+      setCurrentId(found.id);
+      setEnabled(found.enabled);
+      setName(found.name);
+      setConditions(
+        found.conditions?.length
+          ? found.conditions
+          : [{ id: uid(), field: "subject", operator: "contains", value: "" }]
+      );
+      setActions(
+        found.actions?.length
+          ? found.actions
+          : [{ id: uid(), type: "move_to", arg: "重要" }]
+      );
+    }
+  }, [params]);
 
   const addCondition = () =>
     setConditions((list) => [
@@ -195,9 +251,26 @@ export default function RulesBuilder() {
   async function handleSave() {
     setSaving(true);
     try {
-      // 模拟保存：仅本地存储
-      const payload = { name, enabled, conditions, actions, updatedAt: Date.now() };
+      const id = currentId ?? uid();
+      const payload: Rule = { id, name, enabled, conditions, actions, updatedAt: Date.now() };
+
+      // 读出列表，更新或追加
+      let list: Rule[] = [];
+      try {
+        const raw = localStorage.getItem(LS_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        list = Array.isArray(arr) ? (arr as Rule[]) : [];
+      } catch {
+        list = [];
+      }
+
+      const idx = list.findIndex((r) => r.id === id);
+      if (idx >= 0) list[idx] = payload;
+      else list.push(payload);
+
+      localStorage.setItem(LS_KEY, JSON.stringify(list));
       localStorage.setItem("mail_rule_last", JSON.stringify(payload));
+      setCurrentId(id);
       toast.success("规则已保存");
     } catch {
       toast.error("保存失败，请稍后再试");
