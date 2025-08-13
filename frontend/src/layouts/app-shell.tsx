@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Outlet, Link, useLocation } from "react-router-dom";
-import { Mail, Star, Send, Trash2, Settings, Menu, Pencil, Search, Sun, Moon, Folder, Inbox, Wand2, List } from "lucide-react";
+import { Outlet, Link } from "react-router-dom";
+import { Mail, Menu, Pencil, Search, Sun, Moon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Separator } from "../components/ui/separator";
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger
 } from "../components/ui/dropdown-menu";
 import { Toaster } from "sonner";
+import MailSidebar from "../components/mail/mail-sidebar";
 
 function useTheme() {
   const [isDark, setIsDark] = useState(false);
@@ -40,22 +41,6 @@ export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isDark, toggle } = useTheme();
 
-  // 路由高亮同步
-  const location = useLocation();
-  const pathname = location.pathname;
-  const search = location.search;
-  const sp = new URLSearchParams(search);
-  const folder = sp.get("folder") || "";
-
-  const isInbox = pathname === "/mail/inbox" && !folder;
-  const isStarred = pathname === "/mail/inbox" && folder === "starred";
-  const isSent = pathname === "/mail/inbox" && folder === "sent";
-  const isDrafts = pathname === "/mail/inbox" && folder === "drafts";
-  const isTrash = pathname === "/mail/inbox" && folder === "trash";
-
-  const isRules = pathname === "/mail/rules";
-  const isRulesList = pathname === "/mail/rules/list";
-  const isSettings = pathname.startsWith("/settings");
 
   return (
     <div className="min-h-dvh w-full bg-background text-foreground">
@@ -148,33 +133,7 @@ export default function AppShell() {
             sidebarOpen ? "block" : "hidden"
           ].join(" ")}
         >
-          <nav aria-label="文件夹" className="space-y-1">
-            <Link to="/mail/inbox" className="block">
-              <SidebarItem icon={Inbox} label="收件箱" active={isInbox} />
-            </Link>
-            <Link to="/mail/inbox?folder=starred" className="block">
-              <SidebarItem icon={Star} label="星标邮件" active={isStarred} />
-            </Link>
-            <Link to="/mail/inbox?folder=sent" className="block">
-              <SidebarItem icon={Send} label="已发送" active={isSent} />
-            </Link>
-            <Link to="/mail/inbox?folder=drafts" className="block">
-              <SidebarItem icon={Folder} label="草稿箱" active={isDrafts} />
-            </Link>
-            <Link to="/mail/inbox?folder=trash" className="block">
-              <SidebarItem icon={Trash2} label="垃圾箱" active={isTrash} />
-            </Link>
-            <Separator className="my-3" />
-          <Link to="/mail/rules" className="block">
-            <SidebarItem icon={Wand2} label="规则构建器" active={isRules} />
-          </Link>
-          <Link to="/mail/rules/list" className="block">
-            <SidebarItem icon={List} label="规则列表" active={isRulesList} />
-          </Link>
-          <Link to="/settings/profile" className="block">
-            <SidebarItem icon={Settings} label="设置" active={isSettings} />
-          </Link>
-          </nav>
+          <MailSidebar onNavigate={() => setSidebarOpen(false)} />
         </motion.aside>
 
         {/* Content */}
@@ -200,17 +159,3 @@ export default function AppShell() {
   );
 }
 
-function SidebarItem({ icon: Icon, label, active }: { icon: any; label: string; active?: boolean }) {
-  return (
-    <button
-      className={[
-        "w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm",
-        active ? "bg-primary/10 text-primary" : "hover:bg-accent"
-      ].join(" ")}
-      aria-current={active ? "page" : undefined}
-    >
-      <Icon className="h-4 w-4" />
-      <span>{label}</span>
-    </button>
-  );
-}
