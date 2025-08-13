@@ -3,9 +3,10 @@ import { motion } from "motion/react";
 import { Card } from "../../components/ui/card";
 import { Separator } from "../../components/ui/separator";
 import { Skeleton } from "../../components/ui/skeleton";
+import FolderActions from "../../components/mail/folder-actions";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { BulkToolbar, FilterBar, MailList, ReaderPane, type Category, type MockMail } from "../../components/mail/mail-modules";
 import TopActions from "../../components/mail/top-actions";
 import { evaluateAndApplyRules } from "../../lib/mail-rules";
@@ -72,6 +73,23 @@ export default function Inbox() {
 
   const q = keyword.trim().toLowerCase();
 
+  const [params] = useSearchParams();
+  const folder = (params.get("folder") || "").toLowerCase();
+  const folderLabel = folder === "starred" ? "星标邮件" : folder === "sent" ? "已发送" : folder === "drafts" ? "草稿箱" : folder === "trash" ? "垃圾箱" : "";
+  const isDraftsView = folder === "drafts";
+  const isSentView = folder === "sent";
+  type LocalFolderViewType = "drafts" | "sent";
+  const DraftsView: LocalFolderViewType = "drafts";
+  const SentView: LocalFolderViewType = "sent";
+  const selectedDraftCount = useMemo(
+    () => mails.filter((m) => selected.has(m.id) && m.category === "草稿").length,
+    [mails, selected]
+  );
+  const selectedSentCount = useMemo(
+    () => mails.filter((m) => selected.has(m.id) && m.category === "已发送").length,
+    [mails, selected]
+  );
+
   const filtered = useMemo(() => {
     const sMs = start ? new Date(`${start}T00:00:00`).getTime() : undefined;
     const eMs = end ? new Date(`${end}T23:59:59`).getTime() : undefined;
@@ -79,6 +97,13 @@ export default function Inbox() {
       // 视图
       const viewOk = view === "全部" ? true : view === "星标" ? !!m.starred : m.category === view;
       if (!viewOk) return false;
+      // URL folder 视图
+      let folderOk = true;
+      if (folder === "starred") folderOk = !!m.starred;
+      else if (folder === "trash") folderOk = m.category === "垃圾";
+      else if (folder === "sent") folderOk = m.category === "已发送";
+      else if (folder === "drafts") folderOk = m.category === "草稿";
+      if (!folderOk) return false;
       // 关键字
       const text = `${m.subject} ${m.from} ${m.snippet}`.toLowerCase();
       if (q && !text.includes(q)) return false;
@@ -93,7 +118,7 @@ export default function Inbox() {
       if (eMs && m.ts > eMs) return false;
       return true;
     });
-  }, [mails, view, q, fromFilter, start, end, tagSet]);
+  }, [mails, view, q, fromFilter, start, end, tagSet, folder]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageClamped = Math.min(Math.max(page, 1), totalPages);
@@ -179,6 +204,43 @@ export default function Inbox() {
     if (selectedCount === 0) return;
     setMails((prev) => prev.map((m) => (selected.has(m.id) ? { ...m, category: undefined } : m)));
     toast.success("已还原邮件");
+    setSelected(new Set());
+  };
+
+  // 草稿视图：编辑与发送
+  const editSelectedDraft = () => {
+    if (selectedDraftCount !== 1) {
+      toast.info("请选择一封草稿进行编辑");
+      return;
+    }
+    const draft = mails.find((m) => selected.has(m.id) && m.category === "草稿");
+    if (draft) navigate(`/mail/compose?draft=${draft.id}`);
+  };
+
+  const sendSelectedDrafts = () => {
+    const ids = mails.filter((m) => selected.has(m.id) && m.category === "草稿").map((m) => m.id);
+    if (ids.length === 0) {
+      toast.info("未选择草稿");
+      return;
+    }
+    setMails((prev) =>
+      prev.map((m) => (ids.includes(m.id) ? { ...m, category: "已发送" as any, read: true } : m))
+    );
+    toast.success(`已发送 ${ids.length} 封草稿`);
+    setSelected(new Set());
+  };
+
+  // 已发送视图：撤回（移回草稿）
+  const recallSelectedSent = () => {
+    const ids = mails.filter((m) => selected.has(m.id) && m.category === "已发送").map((m) => m.id);
+    if (ids.length === 0) {
+      toast.info("未选择已发送邮件");
+      return;
+    }
+    setMails((prev) =>
+      prev.map((m) => (ids.includes(m.id) ? { ...m, category: "草稿" as any, read: false } : m))
+    );
+    toast.success(`已撤回 ${ids.length} 封已发送邮件至草稿`);
     setSelected(new Set());
   };
 
@@ -278,16 +340,26 @@ export default function Inbox() {
               onMarkRead={markRead}
               onMoveTo={moveTo}
               onMarkSpam={markSpam}
-              canRestoreSpam={view === "垃圾"}
+              canRestoreSpam={view === "垃圾" || folder === "trash"}
               onRestoreFromSpam={restoreFromSpam}
               onDelete={bulkDelete}
             />
+
+            {(isDraftsView || isSentView) ? (
+              <FolderActions
+                view={isDraftsView ? DraftsView : SentView}
+                selectedCount={isDraftsView ? selectedDraftCount : selectedSentCount}
+                onEditDraft={isDraftsView ? editSelectedDraft : undefined}
+                onSendDrafts={isDraftsView ? sendSelectedDrafts : undefined}
+                onRecallSent={isSentView ? recallSelectedSent : undefined}
+              />
+            ) : null}
 
             <ListStats
               className="px-2 py-1"
               count={filtered.length}
               unit="封"
-              segments={[view !== "全部" ? view : "", hasAdv ? "已应用高级筛选" : "", matchedCount > 0 ? `规则命中 ${matchedCount}` : ""]}
+              segments={[view !== "全部" ? view : "", folderLabel, hasAdv ? "已应用高级筛选" : "", matchedCount > 0 ? `规则命中 ${matchedCount}` : ""]}
             />
             <Separator className="my-1" />
 

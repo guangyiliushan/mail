@@ -16,18 +16,23 @@ import {
 } from "../ui/dropdown-menu";
 import { Filter, Calendar, X, Folder, Star, Wand2 } from "lucide-react";
 
-export type Category = "重要" | "广告" | "推广" | "垃圾";
+export type Category = "重要" | "广告" | "推广" | "垃圾" | "已发送" | "草稿" | string ;
+
 
 export type MockMail = {
   id: string;
   subject: string;
   from: string;
+  to?: string;
+  cc?: string;
+  bcc?: string;
   snippet: string;
   date: string;
   ts: number;
   starred?: boolean;
   category?: Category;
   read?: boolean;
+  deleted?: boolean;
 };
 
 function escapeRegExp(s: string) {
