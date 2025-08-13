@@ -12,6 +12,7 @@ import RichTextEditor from "../../components/rich-text-editor";
 import { useDebouncedCallback } from "../../hooks/use-debounce";
 import { loadDraft, saveDraft, clearDraft } from "../../lib/draft";
 import AttachmentZone, { type Attachment } from "../../components/attachment-zone";
+import RecipientInput, { type Recipient } from "../../components/mail/recipient-input";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 type SendState = "idle" | "sending" | "sent";
@@ -23,12 +24,33 @@ function formatTime(ts?: number) {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
+// 将字符串解析为收件人数组（按逗号/分号/空格/换行分割）
+function parseRecipients(raw?: string): Recipient[] {
+  if (!raw) return [];
+  return raw
+    .split(/[,;\s\n]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map<Recipient>((email) => ({
+      email,
+      valid: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email),
+    }));
+}
+
+// 将收件人数组序列化为保存用字符串
+function joinRecipients(list: Recipient[]): string {
+  return list.map((r) => r.email).join(", ");
+}
+
 export default function Compose() {
   // 表单状态
-  const [to, setTo] = useState("");
-  const [cc, setCc] = useState("");
+  const [toRecipients, setToRecipients] = useState<Recipient[]>([]);
+  const [ccRecipients, setCcRecipients] = useState<Recipient[]>([]);
   const [subject, setSubject] = useState("");
   const [html, setHtml] = useState<string>("");
+
+  // Bcc 密送
+  const [bccRecipients, setBccRecipients] = useState<Recipient[]>([]);
 
   // 附件
   const [files, setFiles] = useState<Attachment[]>([]);
@@ -46,20 +68,32 @@ export default function Compose() {
   useEffect(() => {
     const d = loadDraft();
     if (d) {
-      setTo(d.to || "");
-      setCc(d.cc || "");
+      setToRecipients(parseRecipients(d.to));
+      setCcRecipients(parseRecipients(d.cc));
+      // Bcc 兼容：从 localStorage 恢复（避免修改 draft 类型）
+      const bccRaw = window.localStorage.getItem("draft_bcc") || "";
+      setBccRecipients(parseRecipients(bccRaw));
       setSubject(d.subject || "");
       setHtml(d.html || "");
       setLastSavedAt(d.updatedAt);
       setSaveStatus("saved");
+    } else {
+      // 首次进入也尝试恢复 Bcc
+      const bccRaw = window.localStorage.getItem("draft_bcc") || "";
+      setBccRecipients(parseRecipients(bccRaw));
     }
   }, []);
 
-  // 防抖保存
+  // 防抖保存（与原 saveDraft 接口兼容：传 string）
   const doAutoSave = useDebouncedCallback(async () => {
     try {
       setSaveStatus("saving");
-      const saved = await saveDraft({ to, cc, subject, html });
+      const saved = await saveDraft({
+        to: joinRecipients(toRecipients),
+        cc: joinRecipients(ccRecipients),
+        subject,
+        html,
+      });
       setSaveStatus("saved");
       setLastSavedAt(saved.updatedAt);
     } catch {
@@ -72,7 +106,12 @@ export default function Compose() {
     if (canEdit) {
       doAutoSave();
     }
-  }, [to, cc, subject, html, canEdit, doAutoSave]);
+  }, [toRecipients, ccRecipients, subject, html, canEdit, doAutoSave]);
+
+  // 单独持久化 Bcc 至 localStorage（不影响 saveDraft 类型）
+  useEffect(() => {
+    window.localStorage.setItem("draft_bcc", joinRecipients(bccRecipients));
+  }, [bccRecipients]);
 
   // 发送与撤销
   async function handleSend() {
@@ -97,7 +136,12 @@ export default function Compose() {
     setSendState("idle");
     // 撤销后立刻保存一次，以保证恢复草稿
     setSaveStatus("saving");
-    saveDraft({ to, cc, subject, html })
+    saveDraft({
+      to: joinRecipients(toRecipients),
+      cc: joinRecipients(ccRecipients),
+      subject,
+      html,
+    })
       .then((saved) => {
         setSaveStatus("saved");
         setLastSavedAt(saved.updatedAt);
@@ -135,6 +179,21 @@ export default function Compose() {
     }
   }, [saveStatus, lastSavedAt]);
 
+  const hasInvalidRecipients =
+    toRecipients.some((r) => !r.valid) || ccRecipients.some((r) => !r.valid) || bccRecipients.some((r) => !r.valid);
+
+  // 重复邮箱检测（跨 To/Cc/Bcc）
+  const duplicateEmails = (() => {
+    const all = [...toRecipients, ...ccRecipients, ...bccRecipients].map((r) => r.email.toLowerCase());
+    const seen = new Set<string>();
+    const dup = new Set<string>();
+    for (const e of all) {
+      if (seen.has(e)) dup.add(e);
+      else seen.add(e);
+    }
+    return Array.from(dup);
+  })();
+
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
       <div className="flex items-center justify-between">
@@ -165,27 +224,43 @@ export default function Compose() {
 
       <Card className="p-4 space-y-3">
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="to">收件人 (To)</Label>
-            <Input
-              id="to"
-              placeholder="user@example.com"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              disabled={!canEdit}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="cc">抄送 (Cc)</Label>
-            <Input
-              id="cc"
-              placeholder="cc@example.com"
-              value={cc}
-              onChange={(e) => setCc(e.target.value)}
-              disabled={!canEdit}
-            />
-          </div>
+          <RecipientInput
+            id="to"
+            label="收件人 (To)"
+            placeholder="输入邮箱地址，按 Tab/Enter/逗号添加"
+            recipients={toRecipients}
+            onChange={setToRecipients}
+            disabled={!canEdit}
+          />
+          <RecipientInput
+            id="cc"
+            label="抄送 (Cc)"
+            placeholder="输入邮箱地址，按 Tab/Enter/逗号添加"
+            recipients={ccRecipients}
+            onChange={setCcRecipients}
+            disabled={!canEdit}
+          />
+          <RecipientInput
+            id="bcc"
+            label="密送 (Bcc)"
+            placeholder="输入邮箱地址，按 Tab/Enter/逗号添加"
+            recipients={bccRecipients}
+            onChange={setBccRecipients}
+            disabled={!canEdit}
+            className="md:col-span-2"
+          />
         </div>
+
+        {hasInvalidRecipients && (
+          <div className="text-xs text-destructive">
+            收件人/抄送/密送中存在无效邮箱，请修正后再发送。
+          </div>
+        )}
+        {duplicateEmails.length > 0 && (
+          <div className="text-xs text-amber-600 dark:text-amber-400">
+            发现重复邮箱：{duplicateEmails.join(", ")}（发送时将自动去重）
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="subject">主题</Label>
@@ -214,11 +289,70 @@ export default function Compose() {
         <Separator />
 
         <div className="flex items-center gap-2">
-          <Button className="gap-2" onClick={handleSend} disabled={sendState === "sending"}>
+          <Button
+            className="gap-2"
+            onClick={async () => {
+              // 发送前统一去重（不改变 UI，仅用于本次提交载荷）
+              const uniq = (list: Recipient[]) => {
+                const map = new Map<string, Recipient>();
+                list.forEach((r) => {
+                  const key = r.email.toLowerCase();
+                  if (!map.has(key)) map.set(key, r);
+                });
+                return Array.from(map.values());
+              };
+              const toU = uniq(toRecipients);
+              const ccU = uniq(
+                ccRecipients.filter(
+                  (r) => !toU.find((t) => t.email.toLowerCase() === r.email.toLowerCase())
+                )
+              );
+              const bccU = uniq(
+                bccRecipients.filter(
+                  (r) =>
+                    !toU.find((t) => t.email.toLowerCase() === r.email.toLowerCase()) &&
+                    !ccU.find((c) => c.email.toLowerCase() === r.email.toLowerCase())
+                )
+              );
+
+              const payload = {
+                to: toU.map(r => r.email),
+                cc: ccU.map(r => r.email),
+                bcc: bccU.map(r => r.email),
+                subject,
+                html,
+                attachments: files.map(f => ({ name: f.name, size: f.size }))
+              };
+              // 仅用于占位展示，避免未使用变量导致的编译错误
+              // eslint-disable-next-line no-console
+              console.log("send payload (mock)", payload);
+
+              await handleSend();
+            }}
+            disabled={sendState === "sending" || hasInvalidRecipients || toRecipients.length === 0}
+            title={toRecipients.length === 0 ? "请至少添加一个收件人" : undefined}
+          >
             {sendState === "sending" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {sendState === "sending" ? "发送中…" : "发送"}
           </Button>
-          <Button variant="secondary" disabled={!canEdit}>
+          <Button
+            variant="secondary"
+            disabled={!canEdit}
+            onClick={() => {
+              setSaveStatus("saving");
+              saveDraft({
+                to: joinRecipients(toRecipients),
+                cc: joinRecipients(ccRecipients),
+                subject,
+                html,
+              })
+                .then((saved) => {
+                  setSaveStatus("saved");
+                  setLastSavedAt(saved.updatedAt);
+                })
+                .catch(() => setSaveStatus("error"));
+            }}
+          >
             保存草稿
           </Button>
           <Button

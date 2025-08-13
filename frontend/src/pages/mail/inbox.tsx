@@ -6,6 +6,7 @@ import { Separator } from "../../components/ui/separator";
 import { Skeleton } from "../../components/ui/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import { BulkToolbar, FilterBar, MailList, ReaderPane, type Category, type MockMail } from "../../components/mail/mail-modules";
 import TopActions from "../../components/mail/top-actions";
 
@@ -17,6 +18,7 @@ const INIT_MAILS: MockMail[] = [
 ];
 
 export default function Inbox() {
+  const navigate = useNavigate();
   const VIEWS = ["全部", "重要", "广告", "推广", "星标", "垃圾"] as const;
   type View = typeof VIEWS[number];
 
@@ -167,7 +169,7 @@ export default function Inbox() {
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
       {/* 顶部动作 */}
-      <TopActions />
+      <TopActions onCompose={() => navigate("/mail/compose")} />
 
       {/* 筛选条（含高级筛选与条件 Chips） */}
       <FilterBar
