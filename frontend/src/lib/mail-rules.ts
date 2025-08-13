@@ -6,34 +6,10 @@
  * - 返回变更统计以避免无意义 setState 造成循环
  */
 
-export type Field = "subject" | "from" | "to" | "body" | "hasAttachment" | "category" | "starred";
-export type TextOp = "contains" | "not_contains" | "equals" | "starts_with" | "ends_with" | "regex";
-export type BoolOp = "is";
-export type CategoryOp = "equals" | "in";
-export type Operator = TextOp | BoolOp | CategoryOp;
+import type { TextOp, CategoryOp, Condition, Rule } from "../types/rules";
 
-export type Condition = {
-  id: string;
-  field: Field;
-  operator: Operator;
-  value: string; // 对于布尔: "true"/"false"; 多选(in): 逗号分隔
-};
 
-export type ActionType = "move_to" | "mark_read" | "mark_starred" | "delete";
-export type Action = {
-  id: string;
-  type: ActionType;
-  arg?: string; // move_to: 目标分类；mark_*: "true"/"false"
-};
 
-export type Rule = {
-  id: string;
-  name: string;
-  enabled: boolean;
-  conditions: Condition[];
-  actions: Action[];
-  updatedAt: number;
-};
 
 export type MailLike = {
   id: string;

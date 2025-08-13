@@ -18,6 +18,7 @@ import {
 } from "../../components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import type { Rule, Condition, Action } from "../../types/rules";
 import {
   Plus,
   Pencil,
@@ -32,25 +33,6 @@ import {
   Sparkles,
 } from "lucide-react";
 
-type Condition = {
-  id: string;
-  field: string;
-  operator: string;
-  value: string;
-};
-type Action = {
-  id: string;
-  type: string;
-  arg?: string;
-};
-type Rule = {
-  id: string;
-  name: string;
-  enabled: boolean;
-  conditions: Condition[];
-  actions: Action[];
-  updatedAt: number;
-};
 
 const LS_KEY = "mail_rules_all";
 
@@ -312,8 +294,8 @@ export default function RulesListPage() {
       id: uid(),
       name: tpl.name,
       enabled: tpl.enabled,
-      conditions: tpl.conditions,
-      actions: tpl.actions,
+      conditions: tpl.conditions as Condition[],
+      actions: tpl.actions as Action[],
       updatedAt: Date.now(),
     };
     setRules((list) => {

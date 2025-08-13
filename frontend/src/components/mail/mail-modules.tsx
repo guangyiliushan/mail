@@ -15,8 +15,8 @@ import {
   DropdownMenuSeparator,
 } from "../ui/dropdown-menu";
 import { Filter, Calendar, X, Folder, Star, Wand2 } from "lucide-react";
-
-export type Category = "重要" | "广告" | "推广" | "垃圾" | "已发送" | "草稿" | string ;
+import type { Category } from "../../types/rules";
+export type { Category } from "../../types/rules";
 
 
 export type MockMail = {

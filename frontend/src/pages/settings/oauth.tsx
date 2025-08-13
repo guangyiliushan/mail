@@ -38,7 +38,9 @@ export default function SettingsOAuth() {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) setState(JSON.parse(raw) as State);
-    } catch {}
+    } catch (error) {
+      console.error("Failed to load OAuth state:", error);
+    }
   }, []);
 
   function persist(next: State) {

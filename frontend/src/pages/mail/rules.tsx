@@ -19,38 +19,14 @@ import { Plus, Minus, Filter, Wand2, Play } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useSearchParams } from "react-router-dom";
 
-type Field = "subject" | "from" | "to" | "body" | "hasAttachment" | "category" | "starred";
-type TextOp = "contains" | "not_contains" | "equals" | "starts_with" | "ends_with" | "regex";
-type BoolOp = "is";
-type CategoryOp = "equals" | "in";
-type Operator = TextOp | BoolOp | CategoryOp;
+import type { Field, TextOp, CategoryOp, Operator, Condition, ActionType, Action, Rule } from "../../types/rules";
 
-type Condition = {
-  id: string;
-  field: Field;
-  operator: Operator;
-  value: string; // 对于布尔: "true"/"false"; 对于多选: 逗号分隔
-};
 
-type ActionType = "move_to" | "mark_read" | "mark_starred" | "delete";
-type Action = {
-  id: string;
-  type: ActionType;
-  arg?: string; // move_to: 类别
-};
 
 const CATEGORIES = ["重要", "广告", "推广", "垃圾"];
 
 const LS_KEY = "mail_rules_all";
 
-type Rule = {
-  id: string;
-  name: string;
-  enabled: boolean;
-  conditions: Condition[];
-  actions: Action[];
-  updatedAt: number;
-};
 
 function uid() {
   return Math.random().toString(36).slice(2, 9);
@@ -82,7 +58,9 @@ export default function RulesBuilder() {
         const arr = JSON.parse(raw);
         if (Array.isArray(arr)) list = arr as Rule[];
       }
-    } catch {}
+    } catch (error) {
+      console.error("Failed to read rules list in localStorage", error);
+    }
 
     let found = list.find((r) => r.id === id);
     if (!found) {
@@ -92,7 +70,9 @@ export default function RulesBuilder() {
           const one = JSON.parse(rawOne) as Rule;
           if (one && one.id === id) found = one;
         }
-      } catch {}
+      } catch (error) {
+        console.error("Failed to read last rule in localStorage", error);
+      }
     }
 
     if (found) {

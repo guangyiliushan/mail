@@ -10,6 +10,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { BulkToolbar, FilterBar, MailList, ReaderPane, type Category, type MockMail } from "../../components/mail/mail-modules";
 import TopActions from "../../components/mail/top-actions";
 import { evaluateAndApplyRules } from "../../lib/mail-rules";
+import type { FolderViewType } from "../../types/mail";
 import { ListStats, PaginationControls } from "../../components/common/pagination-and-stats";
 
 const INIT_MAILS: MockMail[] = [
@@ -78,9 +79,8 @@ export default function Inbox() {
   const folderLabel = folder === "starred" ? "星标邮件" : folder === "sent" ? "已发送" : folder === "drafts" ? "草稿箱" : folder === "trash" ? "垃圾箱" : "";
   const isDraftsView = folder === "drafts";
   const isSentView = folder === "sent";
-  type LocalFolderViewType = "drafts" | "sent";
-  const DraftsView: LocalFolderViewType = "drafts";
-  const SentView: LocalFolderViewType = "sent";
+  const DraftsView: FolderViewType = "drafts";
+  const SentView: FolderViewType = "sent";
   const selectedDraftCount = useMemo(
     () => mails.filter((m) => selected.has(m.id) && m.category === "草稿").length,
     [mails, selected]
