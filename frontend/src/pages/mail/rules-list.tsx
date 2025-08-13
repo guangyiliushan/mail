@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -8,6 +8,14 @@ import { Checkbox } from "../../components/ui/checkbox";
 import { Badge } from "../../components/ui/badge";
 import { Separator } from "../../components/ui/separator";
 import { Switch } from "../../components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
+} from "../../components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -19,6 +27,9 @@ import {
   ChevronDown,
   GripVertical,
   Filter,
+  Upload,
+  Download,
+  Sparkles,
 } from "lucide-react";
 
 type Condition = {
@@ -106,6 +117,7 @@ export default function RulesListPage() {
   const [keyword, setKeyword] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setRules(loadRules());
@@ -220,6 +232,98 @@ export default function RulesListPage() {
     }
   };
 
+  // 导出当前规则为 JSON 文件
+  const handleExport = () => {
+    try {
+      const data = JSON.stringify(rules, null, 2);
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mail-rules-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("已导出规则 JSON");
+    } catch {
+      toast.error("导出失败");
+    }
+  };
+
+  // 触发文件选择对话框
+  const handleImportClick = () => fileRef.current?.click();
+
+  // 从 JSON 文件导入并覆盖当前规则
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.currentTarget.value = ""; // 允许重复选择同一文件
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const arr = JSON.parse(text);
+      if (!Array.isArray(arr)) throw new Error("格式错误");
+      const normalized = (arr as any[]).map((r) => ({
+        id: uid(),
+        name: String(r.name ?? "未命名规则"),
+        enabled: r.enabled !== false,
+        conditions: Array.isArray(r.conditions) ? r.conditions : [],
+        actions: Array.isArray(r.actions) ? r.actions : [],
+        updatedAt: Date.now(),
+      })) as Rule[];
+      setRules(normalized);
+      saveRules(normalized);
+      setSelected(new Set());
+      toast.success(`已导入 ${normalized.length} 条规则`);
+    } catch {
+      toast.error("导入失败：请选择有效的规则 JSON 文件");
+    }
+  };
+
+  // 快速模板
+  const templates = {
+    invoice: {
+      name: "发票归档到重要",
+      enabled: true,
+      conditions: [{ id: uid(), field: "subject", operator: "contains", value: "发票" }],
+      actions: [{ id: uid(), type: "move_to", arg: "重要" }],
+    },
+    promo: {
+      name: "促销移至推广",
+      enabled: true,
+      conditions: [{ id: uid(), field: "subject", operator: "contains", value: "促销" }],
+      actions: [{ id: uid(), type: "move_to", arg: "推广" }],
+    },
+    attachStar: {
+      name: "有附件加星标",
+      enabled: true,
+      conditions: [{ id: uid(), field: "hasAttachment", operator: "is", value: "true" }],
+      actions: [{ id: uid(), type: "mark_starred", arg: "true" }],
+    },
+    spam: {
+      name: "垃圾关键词 → 垃圾箱",
+      enabled: true,
+      conditions: [{ id: uid(), field: "subject", operator: "contains", value: "中奖" }],
+      actions: [{ id: uid(), type: "delete" }],
+    },
+  };
+
+  const addTemplate = (key: keyof typeof templates) => {
+    const tpl = templates[key];
+    const rule: Rule = {
+      id: uid(),
+      name: tpl.name,
+      enabled: tpl.enabled,
+      conditions: tpl.conditions,
+      actions: tpl.actions,
+      updatedAt: Date.now(),
+    };
+    setRules((list) => {
+      const next = [...list, rule];
+      saveRules(next);
+      return next;
+    });
+    toast.success(`已添加模板：${tpl.name}`);
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
       <div className="flex items-center justify-between">
@@ -231,10 +335,46 @@ export default function RulesListPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* 隐藏的文件选择用于导入 */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+
           <Button variant="secondary" onClick={() => navigate("/mail/rules")}>
             <Plus className="h-4 w-4 mr-1" />
             新建规则
           </Button>
+
+          <Button variant="outline" onClick={handleExport} className="gap-1">
+            <Download className="h-4 w-4" />
+            导出
+          </Button>
+          <Button variant="outline" onClick={handleImportClick} className="gap-1">
+            <Upload className="h-4 w-4" />
+            导入
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" className="gap-1">
+                <Sparkles className="h-4 w-4" />
+                模板
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>快速启用模板</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => addTemplate("invoice")}>发票归档到重要</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addTemplate("promo")}>促销移至推广</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addTemplate("attachStar")}>有附件加星标</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addTemplate("spam")}>垃圾关键词 → 垃圾箱</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button onClick={handleSaveOrder} disabled={saving} className="gap-1">
             {saving ? (
               <span className="h-4 w-4 animate-spin border-2 rounded-full border-primary border-r-transparent" />
