@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger
 } from "../components/ui/dropdown-menu";
 import { Toaster } from "sonner";
-import MailSidebar from "../components/mail/mail-sidebar";
+import MailSidebar from "../shared/components/mail-sidebar";
 
 function useTheme() {
   const [isDark, setIsDark] = useState(false);

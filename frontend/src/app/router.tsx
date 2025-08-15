@@ -3,21 +3,25 @@ import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import AppShell from "../layouts/app-shell";
 import { Toaster } from "sonner";
 
-// Auth pages (modularized)
-import Login from "../pages/auth/login";
-import Register from "../pages/auth/register";
-import Verify from "../pages/auth/verify";
+// Auth pages (from features/auth)
+import Login from "../features/auth/pages/login";
+import Register from "../features/auth/pages/register";
+import Verify from "../features/auth/pages/verify";
 
-import Inbox from "../pages/mail/inbox";
-import Compose from "../pages/mail/compose";
-import Rules from "../pages/mail/rules";
-import RulesList from "../pages/mail/rules-list";
-import SettingsSecurity from "../pages/settings/security";
-import SettingsProfile from "../pages/settings/profile";
-import SettingsOAuth from "../pages/settings/oauth";
-import SettingsTags from "../pages/settings/tags";
+// Mail pages (from features/mail)
+import Inbox from "../features/mail/pages/inbox";
+import Compose from "../features/mail/pages/compose";
+import Rules from "../features/mail/pages/rules";
+import RulesList from "../features/mail/pages/rules-list";
 
-import { isAuthenticated } from "../stores/auth-store";
+// Settings pages (from features/settings)
+import SettingsSecurity from "../features/settings/pages/security";
+import SettingsProfile from "../features/settings/pages/profile";
+import SettingsOAuth from "../features/settings/pages/oauth";
+import SettingsTags from "../features/settings/pages/tags";
+
+// Auth store (from features/auth)
+import { isAuthenticated } from "../features/auth/stores/auth-store";
 
 /**
  * Protect routes that require authentication.
@@ -72,10 +76,13 @@ const router = createBrowserRouter([
       {
         element: <ProtectedLayout />,
         children: [
+          // Mail routes
           { path: "mail/inbox", element: <Inbox /> },
           { path: "mail/compose", element: <Compose /> },
           { path: "mail/rules", element: <Rules /> },
           { path: "mail/rules/list", element: <RulesList /> },
+          
+          // Settings routes
           { path: "settings/security", element: <SettingsSecurity /> },
           { path: "settings/profile", element: <SettingsProfile /> },
           { path: "settings/oauth", element: <SettingsOAuth /> },
