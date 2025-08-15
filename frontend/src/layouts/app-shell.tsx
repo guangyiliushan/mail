@@ -4,7 +4,6 @@ import { Outlet, Link } from "react-router-dom";
 import { Mail, Menu, Pencil, Search, Sun, Moon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Separator } from "../components/ui/separator";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import {
   DropdownMenu,
@@ -43,16 +42,16 @@ export default function AppShell() {
 
 
   return (
-    <div className="min-h-dvh w-full bg-background text-foreground">
+    <div className="min-h-dvh w-full bg-background text-foreground flex flex-col">
       <Toaster richColors position="top-center" closeButton />
       {/* Topbar */}
       <motion.header
         initial={{ y: -12, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 260, damping: 24 }}
-        className="sticky top-0 z-40 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 border-b border-border"
+        className="sticky top-0 z-40 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 border-b border-border flex-shrink-0"
       >
-        <div className="mx-auto max-w-[1400px] px-4 py-2 flex items-center gap-3">
+        <div className="mx-auto max-w-[1400px] px-2 sm:px-4 py-1.5 sm:py-2 flex items-center gap-2 sm:gap-3">
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen((s) => !s)} aria-label="Toggle Sidebar">
             <Menu className="h-5 w-5" />
           </Button>
@@ -120,40 +119,46 @@ export default function AppShell() {
         </div>
       </motion.header>
 
-      {/* Layout */}
-      <div className="mx-auto max-w-[1400px] px-4 grid grid-cols-1 md:grid-cols-[260px_1fr] gap-4 md:gap-6 py-4">
-        {/* Sidebar */}
-        <motion.aside
-          initial={{ x: -16, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.25 }}
-          className={[
-            "bg-card border border-border rounded-lg p-3 md:p-4",
-            "md:static md:block",
-            sidebarOpen ? "block" : "hidden"
-          ].join(" ")}
-        >
-          <MailSidebar onNavigate={() => setSidebarOpen(false)} />
-        </motion.aside>
-
-        {/* Content */}
-        <main className="min-h-[60vh]">
-          <div className="md:hidden mb-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="搜索邮件…" className="pl-9" />
-            </div>
-          </div>
-
-          <motion.section
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
+      {/* Layout - 优化后的紧密布局 */}
+      <div className="flex-1 flex overflow-hidden">
+        <div className="mx-auto max-w-[1400px] w-full flex gap-1 sm:gap-2 p-1 sm:p-2">
+          {/* Sidebar - 响应式侧边栏 */}
+          <motion.aside
+            initial={{ x: -16, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.25 }}
-            className="bg-card border border-border rounded-lg p-4 md:p-6"
+            className={[
+              "bg-card border border-border rounded-lg flex-shrink-0",
+              "w-full sm:w-[240px] md:w-[260px] lg:w-[280px]",
+              "p-2 sm:p-3 md:p-4",
+              "md:static md:flex md:flex-col",
+              sidebarOpen ? "flex flex-col absolute inset-x-1 top-1 z-30 sm:relative sm:inset-auto" : "hidden md:flex"
+            ].join(" ")}
           >
-            <Outlet />
-          </motion.section>
-        </main>
+            <MailSidebar onNavigate={() => setSidebarOpen(false)} />
+          </motion.aside>
+
+          {/* Content - 最大化内容区域 */}
+          <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            {/* 移动端搜索栏 */}
+            <div className="md:hidden mb-1 sm:mb-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="搜索邮件…" className="pl-9 h-9" />
+              </div>
+            </div>
+
+            {/* 主内容区域 */}
+            <motion.section
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="bg-card border border-border rounded-lg flex-1 overflow-hidden flex flex-col p-3 sm:p-4 md:p-6"
+            >
+              <Outlet />
+            </motion.section>
+          </main>
+        </div>
       </div>
     </div>
   );
