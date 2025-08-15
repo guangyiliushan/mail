@@ -1,0 +1,11 @@
+# IDE generated files and folders
+.vscode/
+.idea/
+.settings/
+.metadata/
+.recommenders/
+.eclipse/
+.netbeans/
+.gradle/
+.vs/
+.CodeBuddy/
